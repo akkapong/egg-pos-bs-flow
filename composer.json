@@ -1,0 +1,7 @@
+{
+    "name": "egg-pos-bs-flow",
+    "description": "Package for manage egg business service flow",
+    "require": {
+        "php": "^5.6.0"
+    }
+}
