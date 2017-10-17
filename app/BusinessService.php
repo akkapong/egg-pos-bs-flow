@@ -1,11 +1,13 @@
 <?php
+namespace Eggdigital;
 
 class BusinessService {
 
     private $config;
-    private $classes   = [];
-    private $stacks    = [];
-    private $responses = [];
+    private $classes      = [];
+    private $stacks       = [];
+    private $responses    = [];
+    private $breakProcess = '';
 
 
     public function __construct($configs) {
@@ -22,7 +24,7 @@ class BusinessService {
             'response'  => $datas,
         ];
         //keep response data to stack
-        $this->stacks[] = $each
+        $this->stacks[] = $each;
 
         //add data to response
         $this->addResponsedata($processes['service'], $datas);
@@ -31,7 +33,21 @@ class BusinessService {
     }
 
     //Method for manage fail
-    protected function manageFail()
+    protected function manageFail($service, $process, $response)
+    {
+        $this->addResponsedata($service, $response);
+        switch ($process) {
+            case 'rollback':
+                $this->rollback();
+                break;
+            case 'break':
+                $this->breakProcess = $service;
+                break;
+        }
+    }
+
+    //Method for manage rollback
+    protected function rollback()
     {
         //get last stacks
         $lastProcesses = $this->stacks[-1];
@@ -42,8 +58,30 @@ class BusinessService {
             $processes = $lastProcesses['processes'];
             //get class
             $class = $this->getClass($processes['service']);
-            $this->requestMethod($class, $processes['fail'], $lastProcesses['response']);
+            $this->requestMethod($class, $processes['rollback'], $lastProcesses['response']);
         }
+    }
+
+    //Method for get value from object
+    protected function getValueFormObj($keys, $obj)
+    {
+        $key  = $keys[0];
+
+        //keep in $obj
+        if (isset($obj[$key])) {
+            $obj  = $obj[$key];
+
+            if (count($keys) > 1) {
+                //cut first
+                $keys = array_slice($keys, 1);
+                return $this->getValueFormObj($keys, $obj);
+            }
+        } else {
+            return "";
+        }
+
+        return $obj;
+
     }
 
     //Method for call method in class
@@ -55,11 +93,7 @@ class BusinessService {
     //Method for add respose data 
     protected function addResponsedata($service, $respose)
     {
-        foreach ($respose as $key => $value) {
-            $key = $service.'_'.$key;
-            $this->responses[$key] = $value;
-        }
-
+        $this->responses[$service] = $respose;
     }
 
     //method for format param
@@ -72,8 +106,9 @@ class BusinessService {
                 continue;
             }
 
-            if (isset($this->responses[$key])) {
-                $outputs[$newKey] = $this->responses[$key];
+            $resVal = $this->getValueFormObj(explode('.', $key), $this->responses);
+            if (!empty($resVal)) {
+                $outputs[$newKey] = $resVal;
             }
         }
 
@@ -94,20 +129,41 @@ class BusinessService {
         return $this->classes[$name];
     }
 
+    //Method for get response
+    public function getResponse($key='')
+    {
+        if (empty($key) && !empty($this->breakProcess)) {
+            return $this->responses[$this->breakProcess];
+        
+        }
+
+        if (isset($this->responses[$key])) {
+            return $this->responses[$key];
+        }
+
+        return $this->responses;
+        
+    }
+
     //Method for run service
     // processes is object
     //EX : [
-    //          "main" => "methodName",
-    //          "fail" => "methodName",
-    //          "service" => "className",
-    //          "format" => ["a" => "x"],
+    //          "main"     => "methodName",
+    //          "fail"     => "rollback",
+    //          "rollback" => "methodName",
+    //          "service"  => "className",
+    //          "format"   => ["a" => "x"],
     //     ]
     public function runServices($params, $processes)
     {
-        //TODO
+        if (!empty($this->breakProcess)) {
+            return $this;
+        }
         $service = $processes['service'];
+
         //format params
         $params  = $this->formatParams($params, $processes['format']);
+
         //get class
         $class   = $this->getClass($service);
         
@@ -118,7 +174,11 @@ class BusinessService {
             $this->manageSuccess($processes, $params, $res['data']);
         } else {
             //Fail
-            $this->manageFail();
+            $this->manageFail($processes['service'], $processes['fail'], $res);
+            if ($processes['fail'] == 'rollback') {
+                $this->rollback();
+            }
+            
         }
 
         return $this;
