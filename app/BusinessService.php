@@ -4,10 +4,11 @@ namespace Eggdigital;
 class BusinessService {
 
     private $config;
-    private $classes      = [];
-    private $stacks       = [];
-    private $responses    = [];
-    private $breakProcess = '';
+    private $classes       = [];
+    private $stacks        = [];
+    private $responses     = [];
+    private $breakProcess  = '';
+    private $processFail   = [];
 
 
     public function __construct($configs) {
@@ -15,6 +16,18 @@ class BusinessService {
     } 
 
     //========== Start: Private Zone ==========//
+    //Method for get service name from process
+    protected function getServiceName($processes)
+    {
+        $name = $processes['service'];
+
+        if (isset($processes['alias']) && !empty($processes['alias'])) {
+            $name = $processes['alias'];
+        }
+
+        return $name;
+    }
+
     //Method for manage success
     protected function manageSuccess($processes, $params, $datas)
     {
@@ -27,7 +40,7 @@ class BusinessService {
         $this->stacks[] = $each;
 
         //add data to response
-        $this->addResponsedata($processes['service'], $datas);
+        $this->addResponsedata($this->getServiceName($processes), $datas);
 
         return $each;
     }
@@ -35,10 +48,13 @@ class BusinessService {
     //Method for manage fail
     protected function manageFail($service, $process, $response)
     {
+        //add service name to process fail
+        $this->processFail[] = $service;
         $this->addResponsedata($service, $response);
         switch ($process) {
             case 'rollback':
                 $this->rollback();
+                $this->breakProcess = $service; //after rollback should break process 
                 break;
             case 'break':
                 $this->breakProcess = $service;
@@ -49,17 +65,30 @@ class BusinessService {
     //Method for manage rollback
     protected function rollback()
     {
-        //get last stacks
-        $lastProcesses = $this->stacks[-1];
+        if (empty($this->stacks)) {
+            return true;
+        } 
 
-        if (!empty($lastProcesses)) {
-            //rollback
-            //get processes
-            $processes = $lastProcesses['processes'];
+        //get last stacks
+        $last = array_pop($this->stacks);
+        //rollback
+        //get processes
+        $processes = $last['processes'];
+
+        if (isset($processes['rollback'])) {
             //get class
             $class = $this->getClass($processes['service']);
-            $this->requestMethod($class, $processes['rollback'], $lastProcesses['response']);
+            
+            $res   = $this->requestMethod($class, $processes['rollback'], $last['response']);
+
+            $this->addResponsedata($this->getServiceName($processes).'_rollback', $res);
         }
+
+        if (!empty($this->stacks)) {
+            return $this->rollback();
+        } 
+        
+        return true;
     }
 
     //Method for get value from object
@@ -145,6 +174,23 @@ class BusinessService {
         
     }
 
+    //get help
+    public function help($service=null, $method="")
+    {
+        if (empty($service)) {
+            return [];
+        } 
+
+        $class = $this->getClass($service);
+
+        if (isset($class->helps[$method])) {
+            return $class->helps[$method];
+        }
+        
+        return $class->helps['method_list'];
+        
+    }
+
     //Method for run service
     // processes is object
     //EX : [
@@ -152,6 +198,7 @@ class BusinessService {
     //          "fail"     => "rollback",
     //          "rollback" => "methodName",
     //          "service"  => "className",
+    //          "alias".   => "servicename"
     //          "format"   => ["a" => "x"],
     //     ]
     public function runServices($params, $processes)
@@ -174,7 +221,7 @@ class BusinessService {
             $this->manageSuccess($processes, $params, $res['data']);
         } else {
             //Fail
-            $this->manageFail($processes['service'], $processes['fail'], $res);
+            $this->manageFail($this->getServiceName($processes), $processes['fail'], $res);
             if ($processes['fail'] == 'rollback') {
                 $this->rollback();
             }
@@ -184,6 +231,33 @@ class BusinessService {
         return $this;
 
     } 
+
+    //method for get all processes status
+    public function isSuccess() 
+    {
+        if (empty($this->processFail)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    //method for get sevice fail
+    public function getServiceFail()
+    {
+        return $this->processFail;
+    }
+
+    //Method for get response by service list
+    public function getResponseList($services)
+    {
+        $responses = [];
+
+        foreach ($services as $service) {
+            $responses[$service] = $this->getResponse($service);
+        }
+        return $responses;
+    }
     //========== End: Public Zone ==========//
 
 }
