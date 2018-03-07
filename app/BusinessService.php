@@ -87,7 +87,7 @@ class BusinessService {
         if (!empty($this->stacks)) {
             return $this->rollback();
         } 
-        
+
         return true;
     }
 
@@ -161,11 +161,6 @@ class BusinessService {
     //Method for get response
     public function getResponse($key='')
     {
-        if (empty($key) && !empty($this->breakProcess)) {
-            return $this->responses[$this->breakProcess];
-        
-        }
-
         if (isset($this->responses[$key])) {
             return $this->responses[$key];
         }
@@ -222,9 +217,6 @@ class BusinessService {
         } else {
             //Fail
             $this->manageFail($this->getServiceName($processes), $processes['fail'], $res);
-            if ($processes['fail'] == 'rollback') {
-                $this->rollback();
-            }
             
         }
 
