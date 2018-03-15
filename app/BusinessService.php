@@ -79,7 +79,7 @@ class BusinessService {
             //get class
             $class = $this->getClass($processes['service']);
             
-            $res   = $this->requestMethod($class, $processes['rollback'], $last['response']);
+            $res   = $this->requestMethod($class, $processes['rollback'], $last['response']['data']);
 
             $this->addResponsedata($this->getServiceName($processes).'_rollback', $res);
         }
@@ -209,7 +209,7 @@ class BusinessService {
         //get class
         $class   = $this->getClass($service);
         
-        $res     = $this->requestMethod($class, $processes['main'], $params['data']);
+        $res     = $this->requestMethod($class, $processes['main'], $params);
 
         if ($res['success']) {
             //Success
