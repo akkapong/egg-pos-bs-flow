@@ -213,7 +213,7 @@ class BusinessService {
 
         if ($res['success']) {
             //Success
-            $this->manageSuccess($processes, $params, $res['data']);
+            $this->manageSuccess($processes, $params, $res);
         } else {
             //Fail
             $this->manageFail($this->getServiceName($processes), $processes['fail'], $res);
