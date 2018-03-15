@@ -128,10 +128,7 @@ class BusinessService {
     //method for format param
     protected function formatParams($params, $formats)
     {
-        //No format
-        if (empty($formats)) return $params;
-
-        $outputs = [];
+        $outputs = $params;
         foreach ($formats as $key => $newKey) {
             if (isset($params[$key])) {
                 $outputs[$newKey] = $params[$key];
