@@ -209,7 +209,7 @@ class BusinessService {
         //get class
         $class   = $this->getClass($service);
         
-        $res     = $this->requestMethod($class, $processes['main'], $params);
+        $res     = $this->requestMethod($class, $processes['main'], $params['data']);
 
         if ($res['success']) {
             //Success
