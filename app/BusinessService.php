@@ -62,6 +62,40 @@ class BusinessService {
         }
     }
 
+    //Method for get rollback class
+    protected function getRollbackClass($processes)
+    {
+        if (strrpos($processes['rollback'], '.') !== FALSE) {
+            return explode('.', $processes['rollback']);
+        }
+
+        return [$processes['service'], $processes['rollback']];
+    }
+
+    //Method for get rollback data
+    protected function getRollbackData($last, &$processes)
+    {
+        $last = null;
+        if (is_array($processes['rollback'])) {
+            $method = $processes['rollback']['method'];
+            $data   = $processes['rollback']['data'];
+
+            //update $processes
+            $processes['rollback'] = $method;
+
+            $pathData = explode('.', $processes['rollback']['data']);
+            $lastResponse = $this->getResponse($pathData[0]);
+
+            foreach (array_slice($pathData, 1) as $key) {;
+                $last = $last[$key];
+            }
+
+            return $last;
+        }
+
+        return $last['response']['data'];
+    }
+
     //Method for manage rollback
     protected function rollback()
     {
@@ -76,10 +110,16 @@ class BusinessService {
         $processes = $last['processes'];
 
         if (isset($processes['rollback'])) {
+
+            //get data
+            $rollbackData = getRollbackData($last, $processes);
+
             //get class
-            $class = $this->getClass($processes['service']);
+            list($service, $rollback) = $this->getRollbackClass($processes);
+
+            $class = $this->getClass($service);
             
-            $res   = $this->requestMethod($class, $processes['rollback'], $last['response']['data']);
+            $res   = $this->requestMethod($class, $rollback, $rollbackData);
 
             $this->addResponsedata($this->getServiceName($processes).'_rollback', $res);
         }
@@ -216,7 +256,9 @@ class BusinessService {
             $this->manageSuccess($processes, $params, $res);
         } else {
             //Fail
-            $this->manageFail($this->getServiceName($processes), $processes['fail'], $res);
+            if (isset($processes['fail']) && ($processes['fail'] !== 'ignore')) {
+                $this->manageFail($this->getServiceName($processes), $processes['fail'], $res);
+            }
             
         }
 
