@@ -176,9 +176,7 @@ class BusinessService {
             }
 
             $resVal = $this->getValueFormObj(explode('.', $key), $this->responses);
-            if (!empty($resVal)) {
-                $outputs[$newKey] = $resVal;
-            }
+            $outputs[$newKey] = $resVal;
         }
 
         return $outputs;
