@@ -112,8 +112,8 @@ class BusinessService {
         if (isset($processes['rollback'])) {
 
             //get data
-            $rollbackData = getRollbackData($last, $processes);
-
+            $rollbackData             = $this->getRollbackData($last, $processes);
+            
             //get class
             list($service, $rollback) = $this->getRollbackClass($processes);
 
