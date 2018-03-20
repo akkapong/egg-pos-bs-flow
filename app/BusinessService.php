@@ -75,7 +75,6 @@ class BusinessService {
     //Method for get rollback data
     protected function getRollbackData($last, &$processes)
     {
-        $last = null;
         if (is_array($processes['rollback'])) {
             $method = $processes['rollback']['method'];
             $data   = $processes['rollback']['data'];
