@@ -29,11 +29,12 @@ class BusinessService {
     }
 
     //Method for manage success
-    protected function manageSuccess($processes, $params, $datas)
+    protected function manageSuccess($processes, $params, $headers, $datas)
     {
         $each = [
             'processes' => $processes,
             'params'    => $params,
+            'headers'   => $headers,
             'response'  => $datas,
         ];
         //keep response data to stack
@@ -118,7 +119,7 @@ class BusinessService {
 
             $class = $this->getClass($service);
             
-            $res   = $this->requestMethod($class, $rollback, $rollbackData);
+            $res   = $this->requestMethod($class, $rollback, $rollbackData, $last['headers']);
 
             $this->addResponsedata($this->getServiceName($processes).'_rollback', $res);
         }
@@ -153,9 +154,9 @@ class BusinessService {
     }
 
     //Method for call method in class
-    protected function requestMethod($class, $method, $params)
+    protected function requestMethod($class, $method, $params, $headers=[])
     {
-        return $class->{$method}($params);
+        return $class->{$method}($params, $headers);
     }
 
     //Method for add respose data 
@@ -233,7 +234,7 @@ class BusinessService {
     //          "alias".   => "servicename"
     //          "format"   => ["a" => "x"],
     //     ]
-    public function runServices($params, $processes)
+    public function runServices($params, $processes, $headers=[])
     {
         if (!empty($this->breakProcess)) {
             return $this;
@@ -246,11 +247,11 @@ class BusinessService {
         //get class
         $class   = $this->getClass($service);
         
-        $res     = $this->requestMethod($class, $processes['main'], $params);
+        $res     = $this->requestMethod($class, $processes['main'], $params, $headers);
 
         if ($res['success']) {
             //Success
-            $this->manageSuccess($processes, $params, $res);
+            $this->manageSuccess($processes, $params, $headers, $res);
         } else {
             //Fail
             if (isset($processes['fail']) && ($processes['fail'] !== 'ignore')) {
